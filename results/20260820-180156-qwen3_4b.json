@@ -1,0 +1,20 @@
+{
+  "backend": "ollama",
+  "backend_version": "0.32.14",
+  "cpu": "Intel64 Family 6 Model 154 Stepping 4, GenuineIntel",
+  "date": "2026-08-20T18:01:56-03:00",
+  "duration_s": 16.314,
+  "generated_tokens": 120,
+  "min_free_ram_gb": 0.096,
+  "model": "qwen3:4b",
+  "os": "Windows-10-10.0.26200-SP0",
+  "paged": true,
+  "peak_pagefile_gb": 15.608,
+  "prompt_id": "lowrambench-v1-fixed-120",
+  "quantization": "Q4_K_M",
+  "ram_total_gb": 7.681,
+  "schema_version": "2.0",
+  "size_gb": 2.326,
+  "status": "completed",
+  "tok_s": 7.356
+}
