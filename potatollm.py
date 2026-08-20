@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""lowrambench: CPU/RAM-focused Ollama benchmark helper."""
+"""potatollm: CPU/RAM-focused Ollama benchmark helper."""
 
 import argparse
 import ctypes
@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 SCHEMA_VERSION = "2.0"
-PROMPT_ID = "lowrambench-v1-fixed-120"
+PROMPT_ID = "lowrambench-v1-fixed-120"  # must stay unchanged: identifies fixed prompt; changing would invalidate comparison with existing results/
 PROMPT = (
     "Write a concise practical checklist for deciding whether a local language "
     "model is usable on a low-RAM CPU-only computer. Use plain English and keep "
@@ -32,11 +32,11 @@ UNKNOWN = "unknown"
 VERDICTS = ["fits comfortably", "tight fit", "will page", "do not try"]
 
 
-class LowRamBenchError(Exception):
+class PotatoLLMError(Exception):
     pass
 
 
-class ThrashingAbort(LowRamBenchError):
+class ThrashingAbort(PotatoLLMError):
     pass
 
 
@@ -161,7 +161,7 @@ def get_os_name():
 
 def http_json(method, url, payload=None, timeout=8):
     data = None
-    headers = {"User-Agent": "lowrambench/1.0"}
+    headers = {"User-Agent": "potatollm/1.0"}
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -172,26 +172,26 @@ def http_json(method, url, payload=None, timeout=8):
             return json.loads(body)
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:300]
-        raise LowRamBenchError(f"HTTP {exc.code} from {url}: {detail}")
+        raise PotatoLLMError(f"HTTP {exc.code} from {url}: {detail}")
     except urllib.error.URLError as exc:
-        raise LowRamBenchError(f"Cannot reach {url}: {exc.reason}")
+        raise PotatoLLMError(f"Cannot reach {url}: {exc.reason}")
     except TimeoutError:
-        raise LowRamBenchError(f"Timeout reaching {url}")
+        raise PotatoLLMError(f"Timeout reaching {url}")
     except json.JSONDecodeError as exc:
-        raise LowRamBenchError(f"Invalid JSON from {url}: {exc}")
+        raise PotatoLLMError(f"Invalid JSON from {url}: {exc}")
 
 
 def http_text(url, timeout=10):
-    req = urllib.request.Request(url, headers={"User-Agent": "lowrambench/1.0"}, method="GET")
+    req = urllib.request.Request(url, headers={"User-Agent": "potatollm/1.0"}, method="GET")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as response:
             return response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
-        raise LowRamBenchError(f"HTTP {exc.code} from {url}")
+        raise PotatoLLMError(f"HTTP {exc.code} from {url}")
     except urllib.error.URLError as exc:
-        raise LowRamBenchError(f"Cannot reach {url}: {exc.reason}")
+        raise PotatoLLMError(f"Cannot reach {url}: {exc.reason}")
     except TimeoutError:
-        raise LowRamBenchError(f"Timeout reaching {url}")
+        raise PotatoLLMError(f"Timeout reaching {url}")
 
 
 def split_model(model):
@@ -226,7 +226,7 @@ def get_local_model_info(model):
                 "quantization": details.get("quantization_level") or UNKNOWN,
                 "exact_model": item.get("name") or item.get("model") or model,
             }
-    raise LowRamBenchError(f"Model '{model}' was not found in local Ollama tags")
+    raise PotatoLLMError(f"Model '{model}' was not found in local Ollama tags")
 
 
 def parse_size_to_gb(text):
@@ -269,7 +269,7 @@ def get_public_model_info(model):
         url = "https://ollama.com/library/" + urllib.parse.quote(path, safe=":/-")
     text = http_text(url, timeout=10)
     if "404" in text[:1000].lower() and "not found" in text[:5000].lower():
-        raise LowRamBenchError(f"Model '{model}' was not found on ollama.com")
+        raise PotatoLLMError(f"Model '{model}' was not found on ollama.com")
     return {
         "source": "ollama.com",
         "backend": "ollama",
@@ -283,13 +283,13 @@ def get_public_model_info(model):
 def get_model_info_for_check(model):
     try:
         return get_local_model_info(model)
-    except LowRamBenchError as local_error:
+    except PotatoLLMError as local_error:
         try:
             info = get_public_model_info(model)
             info["local_note"] = str(local_error)
             return info
-        except LowRamBenchError as public_error:
-            raise LowRamBenchError(
+        except PotatoLLMError as public_error:
+            raise PotatoLLMError(
                 f"Could not read model metadata locally or from ollama.com. Local: {local_error}. Public: {public_error}"
             )
 
@@ -298,7 +298,7 @@ def get_ollama_version(default=None):
     try:
         data = http_json("GET", OLLAMA_URL + "/api/version", timeout=2)
         return data.get("version") or default or UNKNOWN
-    except LowRamBenchError:
+    except PotatoLLMError:
         return default if default is not None else UNKNOWN
 
 
@@ -352,7 +352,7 @@ def suggest_smaller(model, verdict):
             candidates.append(re.sub(old, new, model, flags=re.I))
     try:
         local_names = get_local_model_names()
-    except LowRamBenchError:
+    except PotatoLLMError:
         local_names = []
     for candidate in candidates:
         if any(model_match(name, candidate) for name in local_names):
@@ -381,7 +381,7 @@ def cmd_check(args):
         if verdict == UNKNOWN:
             return 2
         return 0
-    except LowRamBenchError as exc:
+    except PotatoLLMError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
@@ -516,7 +516,7 @@ def post_generate_with_abort(payload, timeout, sampler):
         if sampler.thrashing_for() > 20.0:
             raise ThrashingAbort("aborted: thrashing detected")
         if time.monotonic() - started > timeout:
-            raise LowRamBenchError(f"Timeout reaching {OLLAMA_URL}/api/generate")
+            raise PotatoLLMError(f"Timeout reaching {OLLAMA_URL}/api/generate")
         time.sleep(0.25)
     if "error" in box:
         raise box["error"]
@@ -542,7 +542,7 @@ def cmd_bench(args):
     try:
         try:
             model_info = get_local_model_info(args.model)
-        except LowRamBenchError:
+        except PotatoLLMError:
             model_info = {"quantization": UNKNOWN, "size_gb": UNKNOWN}
         before = get_memory_snapshot()
         sampler = Sampler()
@@ -568,13 +568,13 @@ def cmd_bench(args):
             print(format_table([result]))
             return 2
         if not isinstance(response, dict) or response.get("error"):
-            raise LowRamBenchError(str(response.get("error", "Unexpected Ollama response")))
+            raise PotatoLLMError(str(response.get("error", "Unexpected Ollama response")))
         result = build_result(args.model, model_info, before, sampler, after, response, elapsed)
         path = write_result(result)
         print(f"Wrote: {path}")
         print(format_table([result]))
         return 0
-    except LowRamBenchError as exc:
+    except PotatoLLMError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         print("Make sure Ollama is running and the model exists locally. This command never pulls models.", file=sys.stderr)
         return 2
@@ -707,21 +707,21 @@ def cmd_selftest(args):
     def check_python():
         version = sys.version_info
         if version < (3, 9):
-            raise LowRamBenchError(f"Python {version.major}.{version.minor} is too old; need 3.9+")
+            raise PotatoLLMError(f"Python {version.major}.{version.minor} is too old; need 3.9+")
         return platform.python_version()
 
     def check_memory():
         mem = get_memory_snapshot()
         if mem.get("ram_total_gb") == UNKNOWN or mem.get("ram_free_gb") == UNKNOWN:
-            raise LowRamBenchError("RAM total/free is unknown on this platform")
+            raise PotatoLLMError("RAM total/free is unknown on this platform")
         if mem.get("pagefile_used_gb") == UNKNOWN:
-            raise LowRamBenchError("pagefile/swap usage is unknown on this platform")
+            raise PotatoLLMError("pagefile/swap usage is unknown on this platform")
         return f"RAM total {human_gb(mem['ram_total_gb'])}, free {human_gb(mem['ram_free_gb'])}, pagefile used {human_gb(mem['pagefile_used_gb'])}"
 
     def check_ollama():
         data = http_json("GET", OLLAMA_URL + "/api/version", timeout=2)
         if not isinstance(data, dict):
-            raise LowRamBenchError("Ollama responded with a non-object version payload")
+            raise PotatoLLMError("Ollama responded with a non-object version payload")
         version = data.get("version")
         if version:
             return f"Ollama responded, version {version}"
@@ -733,10 +733,10 @@ def cmd_selftest(args):
         write_result(result, path=path)
         loaded = load_result_file(path)
         if not loaded:
-            raise LowRamBenchError("Could not read back selftest JSON")
+            raise PotatoLLMError("Could not read back selftest JSON")
         table = format_table([loaded])
         if "selftest-example" in table or "|" not in table:
-            raise LowRamBenchError("Selftest JSON was not ignored correctly by public table rendering")
+            raise PotatoLLMError("Selftest JSON was not ignored correctly by public table rendering")
         return f"wrote {path}; selftest rows are ignored by public table"
 
     ok.append(selftest_item("python", check_python))

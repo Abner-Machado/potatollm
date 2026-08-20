@@ -1,10 +1,14 @@
+# potatollm
+
+will this model run on your potato?
+
 | date | model | quant | size GB | RAM GB | tokens | seconds | tok/s | min free RAM GB | peak pagefile GB | paged |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-08-20 | qwen3:4b | Q4_K_M | 2.326 | 7.681 | 120 | 15.566 | 7.709 | 0.017 | 15.413 | yes |
+| 2026-08-20 | qwen3:4b | Q4_K_M | 2.326 | 7.681 | 120 | 16.314 | 7.356 | 0.096 | 15.608 | yes |
+| 2026-08-20 | qwen2.5:1.5b | Q4_K_M | 0.918 | 7.681 | 120 | 5.946 | 20.181 | 0.015 | 16.581 | yes |
 
-# lowrambench
-
-lowrambench answers one practical question: can this Ollama model run on a low-RAM CPU-only computer, and at what real speed?
+potatollm answers one practical question: can this Ollama model run on a low-RAM CPU-only computer, and at what real speed?
 
 It has two stages:
 
@@ -17,8 +21,8 @@ The JSON result is the source of truth for the table. Do not edit benchmark rows
 
 Download these files into one folder and run them there:
 
-- `lowrambench.py`
-- `lowrambench.cmd`
+- `potatollm.py`
+- `potatollm.cmd`
 - `schema.json`
 
 Requirements:
@@ -27,22 +31,22 @@ Requirements:
 - Ollama running locally for `bench`
 - No Python packages to install
 
-On Windows, double-click `lowrambench.cmd` or run commands from a terminal:
+On Windows, double-click `potatollm.cmd` or run commands from a terminal:
 
 ```bat
-lowrambench.cmd selftest
-lowrambench.cmd check qwen3:4b
-lowrambench.cmd bench qwen3:4b
-lowrambench.cmd table
+potatollm.cmd selftest
+potatollm.cmd check qwen3:4b
+potatollm.cmd bench qwen3:4b
+potatollm.cmd table
 ```
 
 On Linux or macOS:
 
 ```sh
-python lowrambench.py selftest
-python lowrambench.py check qwen3:4b
-python lowrambench.py bench qwen3:4b
-python lowrambench.py table
+python potatollm.py selftest
+python potatollm.py check qwen3:4b
+python potatollm.py bench qwen3:4b
+python potatollm.py table
 ```
 
 ## Commands
@@ -75,7 +79,7 @@ Bad verdicts include a smaller-model suggestion (only from models that actually 
 
 ### `bench <model>`
 
-Runs a real local Ollama benchmark using the fixed prompt embedded in `lowrambench.py`.
+Runs a real local Ollama benchmark using the fixed prompt embedded in `potatollm.py`.
 
 It records:
 
