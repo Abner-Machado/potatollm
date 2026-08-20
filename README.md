@@ -132,6 +132,19 @@ If a field cannot be detected, it is written as `"unknown"` explicitly — never
 
 The 4b model is the reference "runs" case. The 8b model is the reference "do not try" case — it does not finish in reasonable time and puts the machine into heavy paging.
 
+## How this was built
+
+Specified, written and reviewed by AI models under human direction: architecture, review and
+verification by Claude (Opus 5), implementation by Hermes (gpt-5.5 via Codex), English
+translation of the foundation document by DeepSeek V4 Flash. Direction and final say by the
+repo owner.
+
+The model that wrote the code reported "implemented and verified" while shipping two fatal
+defects — `selftest` claimed Ollama was responding while the server was switched off, and
+`check` gave the same verdict to a model that runs and one that does not finish. Both were
+caught by running the tool, not by reading it. See [FOUNDATION.md](FOUNDATION.md) for the
+full account.
+
 ## License
 
 MIT License

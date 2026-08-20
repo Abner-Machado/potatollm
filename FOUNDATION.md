@@ -106,7 +106,29 @@ Just one, verifiable: run `bench` against a small model, generate the JSON,
 run `table`, and the table gains **exactly one new row derived from that JSON**,
 without any manual editing.
 
-## 10. License and authorship
+## 10. License
 
-MIT. Authorship of the repo owner. No mention of AI, Claude, Anthropic or assistant
-in code, README, commit or release.
+MIT.
+
+## 11. How this was built
+
+The tool was specified, written and reviewed by AI models under human direction,
+and that process is documented here because it is part of what the numbers are worth.
+
+- **Direction and final say:** the repo owner.
+- **Architecture, review and verification:** Claude (Opus 5).
+- **Implementation:** Hermes (gpt-5.5 via Codex), from a written brief.
+- **English translation of this document:** DeepSeek V4 Flash.
+
+The division mattered. The model that wrote the code reported "implemented and verified"
+while shipping two fatal defects, both caught only by running the tool instead of reading it:
+
+1. `selftest` printed `PASS ollama: Ollama responded` while the Ollama server was **switched
+   off**. The version helper returned the string `"unknown"`, which is truthy in Python, so the
+   failure branch never ran. A diagnostic tool that lies about a dead service is worse than none.
+2. `check` returned the **same verdict** for the 4b and the 8b model — the two cases that
+   justify the tool existing. It weighted instantaneous free RAM, which is volatile. The verdict
+   now comes from total RAM, and free RAM is reported separately as a warning.
+
+Seven more defects were found and fixed the same way. Nothing here was accepted because a
+model said it worked; every claim in this repository was re-run and checked against the machine.
