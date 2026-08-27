@@ -123,6 +123,44 @@ Every result follows `schema.json` (version 2.0) and includes:
 
 If a field cannot be detected, it is written as `"unknown"` explicitly — never guessed.
 
+## Contribute a result
+
+The table above is the point of this project. One machine is one data point; the
+table is only useful once it covers machines other than mine.
+
+To add yours:
+
+1. Run the benchmark on your own machine:
+
+   ```sh
+   python potatollm.py bench <model>
+   ```
+
+   This writes a new file under `results/`.
+
+2. Regenerate the table:
+
+   ```sh
+   python potatollm.py table
+   ```
+
+3. Open a pull request with **both** the new `results/*.json` file and the updated
+   table in this README.
+
+Rules, so that rows stay comparable:
+
+- Do not edit table rows by hand. The JSON is the source of truth; `table` renders it.
+- Do not submit a run with `status` other than `ok` as a speed measurement. An
+  `aborted: thrashing detected` result is still welcome — it is evidence that the
+  model does not run there — but it belongs in the table as exactly that.
+- Keep `prompt_id` as produced by the tool. A row generated from a different prompt
+  is not comparable to the others.
+- `unknown` is a valid field value. Leave it as written rather than filling it in by
+  hand.
+
+Low-RAM and CPU-only machines are the interesting cases. A row proving that a model
+does *not* run is worth as much as one proving that it does.
+
 ## Real-world calibration (this machine: i3-1215U, 7.68 GB RAM, no GPU)
 
 | model | size | verdict | outcome |
