@@ -1,0 +1,35 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  results:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m py_compile potatollm.py
+      # The tool itself has no dependencies; jsonschema is only for the check below.
+      - run: pip install jsonschema
+      # Every file in results/ must follow schema.json, or the table lies.
+      - run: |
+          python - <<'PY'
+          import glob, json, sys
+          import jsonschema
+          schema = json.load(open("schema.json", encoding="utf-8"))
+          validator = jsonschema.Draft202012Validator(schema)
+          bad = 0
+          for path in sorted(glob.glob("results/*.json")):
+              errors = list(validator.iter_errors(json.load(open(path, encoding="utf-8"))))
+              print(path, "ok" if not errors else "; ".join(e.message for e in errors))
+              bad += bool(errors)
+          sys.exit(1 if bad else 0)
+          PY
+      # The table is the product; it has to render from the committed results.
+      - run: python potatollm.py table | tee table.md && grep -q 'qwen' table.md
