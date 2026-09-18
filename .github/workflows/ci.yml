@@ -15,6 +15,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m py_compile potatollm.py
+      # Pure-logic tests; no Ollama and no real memory counters involved.
+      - run: python -m unittest -v test_potatollm
       # The tool itself has no dependencies; jsonschema is only for the check below.
       - run: pip install jsonschema
       # Every file in results/ must follow schema.json, or the table lies.

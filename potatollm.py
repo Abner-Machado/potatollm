@@ -307,7 +307,8 @@ def classify_fit(ram_total_gb, ram_free_gb, model_size_gb):
     size = safe_float(model_size_gb)
     if total is None or size is None or total <= 0:
         return UNKNOWN
-    ratio = size / total
+    # Round so a 2.2 GB model on 10 GB is not pushed over the 0.22 line by float noise.
+    ratio = round(size / total, 4)
     if ratio <= 0.22:
         return "fits comfortably"
     if ratio <= 0.35:
