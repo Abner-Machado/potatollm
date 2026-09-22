@@ -7,6 +7,7 @@ will this model run on your potato?
 | 2026-08-20 | qwen3:4b | Q4_K_M | 2.326 | 7.681 | 120 | 15.566 | 7.709 | 0.017 | 15.413 | yes |
 | 2026-08-20 | qwen3:4b | Q4_K_M | 2.326 | 7.681 | 120 | 16.314 | 7.356 | 0.096 | 15.608 | yes |
 | 2026-08-20 | qwen2.5:1.5b | Q4_K_M | 0.918 | 7.681 | 120 | 5.946 | 20.181 | 0.015 | 16.581 | yes |
+| 2026-09-21 | llama3.2:1b | Q8_0 | 1.23 | 7.681 | 120 | 8.107 | 14.802 | 0.013 | 13.579 | yes |
 
 potatollm answers one practical question: can this Ollama model run on a low-RAM CPU-only computer, and at what real speed?
 
@@ -166,7 +167,12 @@ does *not* run is worth as much as one proving that it does.
 | model | size | verdict | outcome |
 |-------|------|---------|---------|
 | qwen3:4b (Q4_K_M) | 2.33 GB | tight fit | 7.7 tok/s, completed in 15.6 s |
+| llama3.2:1b (Q8_0) | 1.23 GB | fits comfortably | 14.8 tok/s, completed in 8.1 s |
 | qwen3-abliterated:8b | 4.68 GB | do not try | did not complete 120 tokens in 10 minutes; free RAM 0.07 GB, pagefile 9.5 GB |
+
+The 1b model at Q8_0 is slower than qwen2.5:1.5b at Q4_K_M (14.8 vs 20.2 tok/s) even with
+fewer parameters: on a machine this tight the file size on disk decides more than the
+parameter count, because everything above free RAM goes to the pagefile.
 
 The 4b model is the reference "runs" case. The 8b model is the reference "do not try" case — it does not finish in reasonable time and puts the machine into heavy paging.
 
