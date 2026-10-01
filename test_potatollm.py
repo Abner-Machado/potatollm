@@ -248,5 +248,93 @@ class ResultTests(unittest.TestCase):
         self.assertIn("qwen", p.format_table(results))
 
 
+class ConversionTests(unittest.TestCase):
+    def test_safe_float(self):
+        self.assertEqual(p.safe_float("2.5"), 2.5)
+        self.assertIsNone(p.safe_float(None))
+        self.assertIsNone(p.safe_float(p.UNKNOWN))
+        self.assertIsNone(p.safe_float("not a number"))
+
+    def test_bytes_to_gb(self):
+        self.assertEqual(p.bytes_to_gb(1024 ** 3), 1.0)
+        self.assertEqual(p.bytes_to_gb(None), p.UNKNOWN)
+        self.assertEqual(p.bytes_to_gb("junk"), p.UNKNOWN)
+
+    def test_gb_to_bytes_roundtrips(self):
+        self.assertEqual(p.gb_to_bytes(1), 1024 ** 3)
+        self.assertIsNone(p.gb_to_bytes("junk"))
+
+    def test_human_gb(self):
+        self.assertEqual(p.human_gb(2), "2.00 GB")
+        self.assertEqual(p.human_gb(None), p.UNKNOWN)
+
+
+class ParseSizeTests(unittest.TestCase):
+    def test_empty_and_unmatched(self):
+        self.assertEqual(p.parse_size_to_gb(""), p.UNKNOWN)
+        self.assertEqual(p.parse_size_to_gb("no sizes here"), p.UNKNOWN)
+
+    def test_mb_converts_to_gb(self):
+        self.assertEqual(p.parse_size_to_gb("512 MB"), round(512 / 1024.0, 3))
+
+    def test_prefers_plausible_artifact_size(self):
+        # 4000 GB is page boilerplate; 4.7 GB is the real artifact.
+        self.assertEqual(p.parse_size_to_gb("4000 GB total, download 4.7 GB"), 4.7)
+
+    def test_falls_back_to_max_when_none_plausible(self):
+        self.assertEqual(p.parse_size_to_gb("900 GB and 1200 GB"), 1200.0)
+
+
+class QuantizationTests(unittest.TestCase):
+    def test_model_name_wins_over_body(self):
+        self.assertEqual(p.parse_quantization("page says F16", "llama:Q4_K_M"), "Q4_K_M")
+
+    def test_uppercased(self):
+        self.assertEqual(p.parse_quantization("quant bf16", ""), "BF16")
+
+    def test_unknown(self):
+        self.assertEqual(p.parse_quantization("nothing", "plain-model"), p.UNKNOWN)
+
+
+class RamFreeWarningTests(unittest.TestCase):
+    def test_none_free_is_silent(self):
+        self.assertIsNone(p.ram_free_warning(None, 4))
+
+    def test_plenty_free_is_silent(self):
+        self.assertIsNone(p.ram_free_warning(10, 4))
+
+    def test_scales_threshold_with_model_size(self):
+        # threshold = min(2.5, size*0.75 + 0.5); for a 4 GB model that caps at 2.5.
+        self.assertIsNotNone(p.ram_free_warning(2.0, 4))
+        self.assertIsNone(p.ram_free_warning(2.6, 4))
+
+    def test_small_model_uses_floor_of_one(self):
+        self.assertIsNone(p.ram_free_warning(1.1, 0.2))
+        self.assertIsNotNone(p.ram_free_warning(0.9, 0.2))
+
+
+class SuggestSmallerTests(unittest.TestCase):
+    def test_healthy_verdict_suggests_nothing(self):
+        self.assertEqual(p.suggest_smaller("llama:8b", "fits comfortably"), "none")
+
+    def test_no_local_match_returns_generic_advice(self):
+        with mock.patch.object(p, "get_local_model_names", return_value=[]):
+            self.assertEqual(
+                p.suggest_smaller("llama:8b", "will page"),
+                "try a 3B or smaller quantized model",
+            )
+
+    def test_prefers_locally_present_smaller_model(self):
+        with mock.patch.object(p, "get_local_model_names", return_value=["llama:4b"]):
+            self.assertEqual(p.suggest_smaller("llama:8b", "do not try"), "llama:4b")
+
+    def test_network_failure_is_swallowed(self):
+        with mock.patch.object(p, "get_local_model_names", side_effect=p.PotatoLLMError("down")):
+            self.assertEqual(
+                p.suggest_smaller("qwen:7b", "will page"),
+                "try a 3B or smaller quantized model",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
