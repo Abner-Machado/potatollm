@@ -8,6 +8,9 @@ will this model run on your potato?
 | 2026-08-20 | qwen3:4b | Q4_K_M | 2.326 | 7.681 | 120 | 16.314 | 7.356 | 0.096 | 15.608 | yes |
 | 2026-08-20 | qwen2.5:1.5b | Q4_K_M | 0.918 | 7.681 | 120 | 5.946 | 20.181 | 0.015 | 16.581 | yes |
 | 2026-09-21 | llama3.2:1b | Q8_0 | 1.23 | 7.681 | 120 | 8.107 | 14.802 | 0.013 | 13.579 | yes |
+| 2026-11-13 | Huihui-Qwen3-4B-Instruct-2507-abliterated:Q4_K_M | Q4_K_M | 2.326 | 23.681 | 120 | 15.59 | 7.697 | 9.252 | 17.725 | yes |
+| 2026-11-13 | LFM2.5-8B-A1B-abliterated-v3:Q4_K_M | Q4_K_M | 4.801 | 23.681 | 84 | 4.451 | 18.874 | 7.863 | 19.036 | yes |
+| 2026-11-13 | hf.co/mradermacher/Huihui-Qwen3.6-35B-A3B-abliterated-i1-GGUF:i1-IQ2_XXS | IQ2_XXS | 8.845 | 23.681 | 120 | 17.862 | 6.718 | 3.637 | 23.655 | yes |
 
 potatollm answers one practical question: can this Ollama model run on a low-RAM CPU-only computer, and at what real speed?
 
@@ -162,7 +165,7 @@ Rules, so that rows stay comparable:
 Low-RAM and CPU-only machines are the interesting cases. A row proving that a model
 does *not* run is worth as much as one proving that it does.
 
-## Real-world calibration (this machine: i3-1215U, 7.68 GB RAM, no GPU)
+## Real-world calibration (this machine: i3-1215U, no GPU, 7.68 GB RAM at the time)
 
 | model | size | verdict | outcome |
 |-------|------|---------|---------|
@@ -175,6 +178,73 @@ fewer parameters: on a machine this tight the file size on disk decides more tha
 parameter count, because everything above free RAM goes to the pagefile.
 
 The 4b model is the reference "runs" case. The 8b model is the reference "do not try" case — it does not finish in reasonable time and puts the machine into heavy paging.
+
+## MoE vs dense on a potato
+
+Three rows dated 2026-11-13, same i3-1215U as every row above, but now with 23.68 GB of RAM
+instead of 7.68 GB. I wanted to know whether a mixture-of-experts model with 3B active
+parameters would beat a 4B dense model on a CPU. It did not. It lost to both models that
+were already sitting on the disk.
+
+The exact weights, so the rows can be reproduced:
+
+| model | GGUF quant | file on disk | params | tok/s |
+|-------|-----------|--------------|--------|-------|
+| `Huihui-Qwen3-4B-Instruct-2507-abliterated` | `Q4_K_M` | 2.326 GB | 4B dense | 7.697 |
+| `LFM2.5-8B-A1B-abliterated-v3` | `Q4_K_M` | 4.801 GB | 8B total, 1B active | 18.874 |
+| `hf.co/mradermacher/Huihui-Qwen3.6-35B-A3B-abliterated-i1-GGUF` | `i1-IQ2_XXS` | 8.845 GB | 35B total, 3B active | 6.718 |
+
+The middle row is the headline. A MoE with 1B active parameters runs 2.5 times faster than a
+dense 4B, off a file twice the size. Active parameters set the speed, total size sets the
+RAM. That part of the theory holds.
+
+The bottom row is where it breaks. This machine reads memory at about 20 GB/s. At roughly
+2.17 bits per weight, 3B active parameters means around 0.81 GB pulled per token, so the
+usual `tok/s = bandwidth / bytes per token` arithmetic predicts 24 tok/s. The measurement
+came back at 6.718, off by a factor of 3.6. I reran it by hand twice outside the fixed
+prompt and got 6.55 and 6.96, so it is not a sampling artifact.
+
+Two things explain the gap, and the first one matters more than the architecture:
+
+The first is that IQ quantization is compute-bound rather than bandwidth-bound. Unpacking an i-quant weight costs
+far more arithmetic per byte than a K-quant one. On a 6-core i3 the dequantization kernel
+becomes the ceiling before memory does, which is how a 2.326 GB `Q4_K_M` file ends up tied
+with an 8.845 GB `IQ2_XXS` one. The practical consequence is the opposite of intuition:
+moving up to `IQ3_XS` would be slower, not faster. If you want speed on hardware like this,
+a small K-quant beats a large i-quant, and the quant family belongs in the comparison
+alongside the file size.
+
+The second is that a MoE reads its experts in scattered chunks. The 20 GB/s figure comes from sequential reads.
+Gathering a different subset of experts per token does not look like a sequential read, and
+the LFM2.5 row shows the same tax in milder form: 18.874 against a prediction near 28.
+
+There is one more cost that the fixed prompt hides. The A3B is a reasoning model. Asked
+outside the benchmark for an answer in 120 words or fewer, it emitted 1530 tokens of chain
+of thought and took 4 minutes 7 seconds of wall clock. Equal tok/s does not mean an equal
+wait for a usable answer.
+
+### What the RAM columns actually say
+
+The upgrade from 7.68 GB to 23.68 GB is visible in one column and invisible in another.
+`min free RAM` went from 0.013 to 0.096 GB on the old rows to between 3.637 and 9.252 GB on
+the new ones. The machine stopped being starved. Speed barely moved: `qwen3:4b` at `Q4_K_M`
+did 7.709 tok/s on 7.68 GB and the 4B abliterated at the same quant and the same file size
+does 7.697 on 23.68 GB. More RAM bought headroom, not throughput, which is what you would
+expect once a model already fits.
+
+Read `paged` with that in mind. The flag trips when pagefile usage climbs more than 0.25 GB
+during a run, and on Windows that number is systemwide commit charge rather than proof of
+disk thrashing. Loading an 8.845 GB model raises commit by roughly its own size even when
+every byte stays resident. With 9.252 GB still free at the low point, the 4B row is not
+swapping. `min free RAM` is the column that tells you whether the machine was actually
+starved, and `peak pagefile` climbing to 23.655 GB on the A3B row with 3.637 GB free is the
+honest warning sign on this set: that model is the first one here that made the pagefile the
+thing to watch.
+
+One caveat I will not paper over. `IQ2_XXS` is a 2-bit quantization and an aggressive one.
+It is fine for measuring speed, which is all this table claims, and it is not a verdict on
+how well the 35B model reasons at a sane quant. What I can say is that no quant of it is
+going to be fast here, because the bottleneck is not the one the file size suggests.
 
 ## How this was built
 

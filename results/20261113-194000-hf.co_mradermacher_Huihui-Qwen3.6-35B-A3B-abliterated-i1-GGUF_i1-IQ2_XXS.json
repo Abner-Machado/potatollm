@@ -1,0 +1,20 @@
+{
+  "backend": "ollama",
+  "backend_version": "0.40.15",
+  "cpu": "Intel64 Family 6 Model 154 Stepping 4, GenuineIntel",
+  "date": "2026-11-13T19:40:00-03:00",
+  "duration_s": 17.862,
+  "generated_tokens": 120,
+  "min_free_ram_gb": 3.637,
+  "model": "hf.co/mradermacher/Huihui-Qwen3.6-35B-A3B-abliterated-i1-GGUF:i1-IQ2_XXS",
+  "os": "Windows-11-10.0.26300-SP0",
+  "paged": true,
+  "peak_pagefile_gb": 23.655,
+  "prompt_id": "lowrambench-v1-fixed-120",
+  "quantization": "IQ2_XXS",
+  "ram_total_gb": 23.681,
+  "schema_version": "2.0",
+  "size_gb": 8.845,
+  "status": "completed",
+  "tok_s": 6.718
+}
