@@ -31,7 +31,7 @@ Download these files into one folder and run them there:
 
 Requirements:
 
-- Python 3.9 or newer
+- Python 3.11 or newer (CI covers 3.11 and 3.13; the tool still starts on 3.9, that is just no longer tested)
 - Ollama running locally for `bench`
 - No Python packages to install
 
