@@ -336,5 +336,33 @@ class SuggestSmallerTests(unittest.TestCase):
             )
 
 
+class ResolveResultsDirTests(unittest.TestCase):
+    """An installed copy must not write benchmark JSON into site-packages."""
+
+    def test_env_override_wins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "elsewhere"
+            with mock.patch.dict(p.os.environ, {"POTATOLLM_RESULTS": str(target)}, clear=False):
+                self.assertEqual(p.resolve_results_dir(), target.resolve())
+
+    def test_repository_checkout_keeps_the_directory_beside_the_script(self):
+        env = {k: v for k, v in p.os.environ.items() if k != "POTATOLLM_RESULTS"}
+        beside = Path(p.__file__).resolve().parent / "results"
+        with mock.patch.dict(p.os.environ, env, clear=True):
+            self.assertTrue(beside.is_dir(), "the repository ships results/")
+            self.assertEqual(p.resolve_results_dir(), beside)
+
+    def test_installed_copy_falls_back_to_the_working_directory(self):
+        env = {k: v for k, v in p.os.environ.items() if k != "POTATOLLM_RESULTS"}
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_module = Path(tmp) / "site-packages" / "potatollm.py"
+            fake_module.parent.mkdir(parents=True)
+            fake_module.write_text("", encoding="utf-8")
+            cwd = Path(tmp) / "cwd"
+            cwd.mkdir()
+            with mock.patch.dict(p.os.environ, env, clear=True),                  mock.patch.object(p, "__file__", str(fake_module)),                  mock.patch.object(p.Path, "cwd", staticmethod(lambda: cwd)):
+                self.assertEqual(p.resolve_results_dir(), cwd / "results")
+
+
 if __name__ == "__main__":
     unittest.main()
