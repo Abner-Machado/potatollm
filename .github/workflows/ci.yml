@@ -35,3 +35,23 @@ jobs:
           PY
       # The table is the product; it has to render from the committed results.
       - run: python potatollm.py table | tee table.md && grep -q 'qwen' table.md
+      # The README table has to be the rendered results, not typed rows.
+      - run: |
+          python - <<'PY'
+          import re, subprocess, sys
+          rendered = subprocess.run(
+              [sys.executable, "potatollm.py", "table"],
+              capture_output=True, text=True, check=True,
+          ).stdout.strip().splitlines()
+          readme = open("README.md", encoding="utf-8").read().replace("\r\n", "\n")
+          block = re.search(r"^\| date \|.*?(?=\n\s*\n)", readme, re.S | re.M)
+          if not block:
+              sys.exit("README has no rendered table block starting with '| date |'")
+          committed = block.group(0).strip().splitlines()
+          if committed != rendered:
+              import difflib
+              print("\n".join(difflib.unified_diff(
+                  committed, rendered, "README.md", "potatollm.py table", lineterm="")))
+              sys.exit("README table does not match results/. Run 'potatollm table' and paste the output.")
+          print(f"README table matches results/ ({len(rendered) - 2} rows)")
+          PY
