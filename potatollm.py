@@ -26,7 +26,28 @@ PROMPT = (
     "the answer under 120 words."
 )
 OLLAMA_URL = "http://127.0.0.1:11434"
-RESULTS_DIR = Path(__file__).resolve().parent / "results"
+def resolve_results_dir():
+    """Where benchmark JSON is written and read from.
+
+    Order matters, so that an installed copy never writes into site-packages,
+    where the contributor would not find the file to open a pull request with:
+
+    1. POTATOLLM_RESULTS, when set, wins.
+    2. A ``results`` directory next to this file, which is the repository
+       checkout. Repository behaviour is unchanged.
+    3. ``results`` under the current working directory, which is the case for
+       ``pipx``/``uvx`` installs.
+    """
+    override = os.environ.get("POTATOLLM_RESULTS")
+    if override:
+        return Path(override).expanduser().resolve()
+    beside_script = Path(__file__).resolve().parent / "results"
+    if beside_script.is_dir():
+        return beside_script
+    return Path.cwd() / "results"
+
+
+RESULTS_DIR = resolve_results_dir()
 UNKNOWN = "unknown"
 
 VERDICTS = ["fits comfortably", "tight fit", "will page", "do not try"]

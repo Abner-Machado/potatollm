@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "potatollm"
+version = "0.2.0"
+description = "Will this model run on your potato? Measures whether an Ollama model fits a low-RAM CPU-only machine, and at what real speed."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "Abner Machado" }]
+keywords = ["ollama", "llm", "benchmark", "cpu", "low-ram", "local-llm"]
+classifiers = [
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Topic :: System :: Benchmark",
+]
+# No runtime dependencies, on purpose: the tool reads memory counters and talks
+# to Ollama over HTTP with the standard library only.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Abner-Machado/potatollm"
+Source = "https://github.com/Abner-Machado/potatollm"
+Issues = "https://github.com/Abner-Machado/potatollm/issues"
+
+[project.scripts]
+potatollm = "potatollm:main"
+
+[tool.setuptools]
+py-modules = ["potatollm"]

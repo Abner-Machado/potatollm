@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 _inbox-*.md
 results/selftest-example.json
+build/
+*.egg-info/
