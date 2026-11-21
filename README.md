@@ -23,7 +23,23 @@ The JSON result is the source of truth for the table. Do not edit benchmark rows
 
 ## Install
 
-Download these files into one folder and run them there:
+One command, nothing to clone:
+
+```sh
+uvx --from git+https://github.com/Abner-Machado/potatollm potatollm selftest
+```
+
+To keep it on the machine instead:
+
+```sh
+pipx install git+https://github.com/Abner-Machado/potatollm
+potatollm selftest
+```
+
+Installed either way, `bench` writes its JSON to `results/` under the directory you run
+it from, never into the installed package. `POTATOLLM_RESULTS` overrides that path.
+
+Or download these files into one folder and run them there:
 
 - `potatollm.py`
 - `potatollm.cmd`
@@ -131,6 +147,8 @@ If a field cannot be detected, it is written as `"unknown"` explicitly — never
 
 The table above is the point of this project. One machine is one data point; the
 table is only useful once it covers machines other than mine.
+
+Full steps, rules and what to put in the pull request: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 To add yours:
 
